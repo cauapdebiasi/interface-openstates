@@ -5,9 +5,9 @@ jspm_packages/
 .eslintcache
 
 # Production Build
-/build
-/dist
-/out
+build/
+dist/
+out/
 
 # TypeScript
 *.tsbuildinfo
