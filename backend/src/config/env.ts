@@ -9,6 +9,7 @@ const envSchema = z.object({
   DB_USER: z.string().min(1, 'DB_USER é obrigatório'),
   DB_PASS: z.string().min(1, 'DB_PASS é obrigatório'),
   DB_HOST: z.string().default('localhost'),
+  DB_PORT: z.coerce.number().default(5433),
   OPENSTATES_API_KEY: z.string().min(1, 'OPENSTATES_API_KEY é obrigatório'),
 });
 
