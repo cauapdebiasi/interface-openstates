@@ -2,12 +2,12 @@ import { DataTypes, Model } from 'sequelize';
 import sequelize from '../config/database.js';
 
 export class Person extends Model {
-  public id!: string;
-  public name!: string;
-  public role_title!: string;
-  public party!: string;
-  public state!: string;
-  public image!: string | null;
+  public declare id: string;
+  public declare name: string;
+  public declare role_title: string;
+  public declare party: string;
+  public declare state: string;
+  public declare image: string | null;
 }
 
 Person.init(
