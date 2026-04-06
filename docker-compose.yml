@@ -2,6 +2,8 @@ services:
   db:
     image: postgres:16-alpine
     container_name: teste-tecnico-openstates-db
+    env_file:
+      - ./backend/.env
     environment:
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASS:-postgres}
@@ -10,6 +12,25 @@ services:
       - "${DB_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: teste-tecnico-openstates-backend
+    ports:
+      - "${PORT:-3000}:3000"
+    depends_on:
+      - db
+    env_file:
+      - ./backend/.env
+    environment:
+      # Sobrescreve o HOST para o isolamento da rede virtual achar o container de db
+      - DB_HOST=db
+      # Sobrescreve a PORTA pro Backend usar a 5432 nativa na comunicação interna
+      - DB_PORT=5432
+      - NODE_ENV=production
+    restart: unless-stopped
 
 volumes:
   pgdata:
