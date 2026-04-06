@@ -19,7 +19,6 @@ const getPeopleQuerySchema = z.object({
 export const getStatesData = async (req: Request, res: Response) => {
   try {
     const states = await Person.aggregate('state', 'DISTINCT', { plain: false }) as { DISTINCT: string }[];
-    console.dir(states)
     res.json({ states: states.map((s) => s.DISTINCT).filter(Boolean).sort() });
   } catch (error) {
     console.error('Erro ao mapear estados:', error);
