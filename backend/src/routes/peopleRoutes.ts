@@ -3,6 +3,8 @@ import { getStatesData, getPartiesData, getPeople, syncPeople } from '../control
 
 const router = Router();
 
+router.get('/states', getStatesData);
+router.get('/parties', getPartiesData);
 router.get('/', getPeople);
 router.post('/sync', syncPeople);
 
