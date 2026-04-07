@@ -19,7 +19,7 @@ const getPeopleQuerySchema = z.object({
 export const getStatesData = async (req: Request, res: Response) => {
   try {
     const states = await Person.aggregate('state', 'DISTINCT', { plain: false }) as { DISTINCT: string }[];
-    res.json({ states: states.map((s) => s.DISTINCT).filter(Boolean).sort() });
+    res.json({ results: states.map((s) => s.DISTINCT).filter(Boolean).sort() });
   } catch (error) {
     console.error('Erro ao mapear estados:', error);
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: 'Erro ao buscar listagem de estados' });
@@ -29,7 +29,7 @@ export const getStatesData = async (req: Request, res: Response) => {
 export const getPartiesData = async (req: Request, res: Response) => {
   try {
     const parties = await Person.aggregate('party', 'DISTINCT', { plain: false }) as { DISTINCT: string }[];
-    res.json({ parties: parties.map((p) => p.DISTINCT).filter(Boolean).sort() });
+    res.json({ results: parties.map((p) => p.DISTINCT).filter(Boolean).sort() });
   } catch (error) {
     console.error('Erro ao mapear partidos:', error);
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: 'Erro ao buscar listagem de partidos' });
