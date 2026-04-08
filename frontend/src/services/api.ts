@@ -32,4 +32,9 @@ export const getParties = async (): Promise<string[]> => {
   return response.data.results || [];
 };
 
+export const syncPeople = async (): Promise<any> => {
+  const response = await api.post('/people/sync');
+  return response.data;
+};
+
 export default api;
