@@ -10,7 +10,7 @@ export function PoliticianGrid({ politicians }: PoliticianGridProps) {
   if (!politicians || politicians.length === 0) {
     return (
       <Center py="xl">
-        <Text c="dimmed" size="lg">Nenhum político encontrado para os filtros selecionados.</Text>
+        <Text className="empty-state" c="dimmed" size="lg">Nenhum político encontrado para os filtros selecionados.</Text>
       </Center>
     );
   }

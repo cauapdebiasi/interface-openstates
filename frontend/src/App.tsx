@@ -39,10 +39,10 @@ function App() {
       <Header />
 
       <Container size="xl" mt="xl">
-        <Paper shadow="sm" p="md" radius="md" mb="xl" pos="relative">
+        <Paper className="filter-paper" p="md" mb="xl" pos="relative">
           <LoadingOverlay visible={isLoadingStates || isLoadingParties} zIndex={1000} overlayProps={{ radius: "sm", blur: 2 }} />
 
-          <Title order={3} mb="md">Filtros</Title>
+          <Title className="filter-title" order={3} mb="md">Filtros</Title>
 
           <Grid>
             <Grid.Col span={{ base: 12, sm: 6 }}>

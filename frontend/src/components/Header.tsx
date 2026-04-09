@@ -51,17 +51,17 @@ export function Header() {
   });
 
   return (
-    <Paper radius={0} py="md" pos="sticky" top={0} style={{ zIndex: 100, borderBottom: '1px solid black' }}>
+    <Paper className="app-header" radius={0} py="md" pos="sticky" top={0} style={{ zIndex: 100 }}>
       <Container size="xl">
         <Group justify="space-between">
           <Group gap="sm">
-            <IconBuildingMonument size={32} />
-            <Title order={2} style={{ fontFamily: 'Inter, sans-serif' }}>
-              Teste Técnico OpenStates
+            <IconBuildingMonument className="app-header-icon" size={32} />
+            <Title className="app-header-title" order={2}>
+              OpenStates
             </Title>
           </Group>
 
-          <Group gap="md">
+          <Group className="header-actions" gap="md">
             <Select
               leftSection={<IconClock size={16} />}
               placeholder="Agendamento"
@@ -82,10 +82,10 @@ export function Header() {
             />
 
             <Button
+              className="sync-button"
               leftSection={<IconRefresh size={16} />}
               onClick={() => syncMutation.mutate()}
               loading={syncMutation.isPending}
-              variant="light"
             >
               Atualizar Dados
             </Button>

@@ -8,7 +8,7 @@ interface PoliticianCardProps {
 
 export function PoliticianCard({ politician }: PoliticianCardProps) {
   return (
-    <Card shadow="sm" padding="lg" radius="md" style={{ borderColor: 'black' }} withBorder>
+    <Card className="politician-card" padding="lg">
       <Card.Section>
         {politician.image ? (
           <Image
@@ -18,41 +18,41 @@ export function PoliticianCard({ politician }: PoliticianCardProps) {
             fallbackSrc="https://placehold.co/400x220?text=Sem+Foto"
           />
         ) : (
-          <Group justify="center" h={220} bg="gray.1">
-            <IconUser size={64} color="gray" />
+          <Group className="card-placeholder" justify="center" h={220}>
+            <IconUser size={64} />
           </Group>
         )}
       </Card.Section>
 
       <Stack mt="md" gap="xs">
         <Group justify="space-between" wrap="nowrap">
-          <Text fw={600} size="lg" truncate c="var(--text-h)" style={{ fontFamily: 'var(--heading)' }}>
+          <Text className="politician-name" fw={600} size="lg" truncate>
             {politician.name}
           </Text>
           {politician.party && (
-            <Badge bg="var(--accent-bg)" c="var(--accent)" style={{ fontFamily: 'var(--mono)' }}>
+            <Badge className="party-badge">
               {politician.party}
             </Badge>
           )}
         </Group>
 
         {politician.role_title && (
-          <Group gap="xs" wrap="nowrap" c="var(--text)">
-            <ThemeIcon bg="var(--code-bg)" c="var(--text)" size="sm">
+          <Group gap="xs" wrap="nowrap">
+            <ThemeIcon className="detail-icon" size="sm">
               <IconBuildingMonument size={14} />
             </ThemeIcon>
-            <Text size="sm" truncate>
+            <Text className="detail-text" size="sm" truncate>
               {politician.role_title}
             </Text>
           </Group>
         )}
 
         {politician.state && (
-          <Group gap="xs" wrap="nowrap" c="var(--text)">
-            <ThemeIcon bg="var(--social-bg)" c="var(--accent)" size="sm">
+          <Group gap="xs" wrap="nowrap">
+            <ThemeIcon className="detail-icon" size="sm">
               <IconMapPin size={14} />
             </ThemeIcon>
-            <Text size="sm">{politician.state}</Text>
+            <Text className="detail-text" size="sm">{politician.state}</Text>
           </Group>
         )}
       </Stack>

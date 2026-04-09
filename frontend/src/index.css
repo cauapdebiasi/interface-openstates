@@ -1,0 +1,352 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+/* Paleta de cores e estilos do tailwind pra não precisar fazer do zero */
+:root {
+  --green-50: #f0fdf4;
+  --green-100: #dcfce7;
+  --green-200: #bbf7d0;
+  --green-300: #86efac;
+  --green-400: #4ade80;
+  --green-500: #22c55e;
+  --green-600: #16a34a;
+  --green-700: #15803d;
+  --green-800: #166534;
+  --green-900: #14532d;
+
+  --slate-50: #f8fafc;
+  --slate-100: #f1f5f9;
+  --slate-200: #e2e8f0;
+  --slate-300: #cbd5e1;
+  --slate-400: #94a3b8;
+  --slate-500: #64748b;
+  --slate-600: #475569;
+  --slate-700: #334155;
+  --slate-800: #1e293b;
+  --slate-900: #0f172a;
+  --slate-950: #020617;
+
+  --bg: var(--slate-50);
+  --bg-card: #ffffff;
+  --bg-header: rgba(255, 255, 255, 0.82);
+  --bg-filter: #ffffff;
+  --border: var(--slate-200);
+
+  --text: var(--slate-600);
+  --text-h: var(--slate-900);
+  --text-muted: var(--slate-400);
+
+  --accent: var(--green-600);
+  --accent-light: var(--green-100);
+  --accent-bg: var(--green-50);
+
+  --heading: 'Inter', sans-serif;
+  --mono: 'Inter', sans-serif;
+
+  --code-bg: var(--green-50);
+  --social-bg: var(--green-100);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.06), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 25px -3px rgba(0, 0, 0, 0.08), 0 4px 10px -4px rgba(0, 0, 0, 0.04);
+  --shadow-xl: 0 20px 40px -4px rgba(0, 0, 0, 0.1), 0 8px 16px -6px rgba(0, 0, 0, 0.05);
+  --shadow-card-hover: 0 20px 40px -8px rgba(22, 163, 74, 0.15), 0 8px 16px -6px rgba(0, 0, 0, 0.06);
+  --shadow-header: 0 1px 3px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.04);
+
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(22, 163, 74, 0.08), transparent),
+    radial-gradient(ellipse 60% 40% at 80% 100%, rgba(22, 163, 74, 0.05), transparent);
+}
+
+.app-header {
+  background: var(--bg-header) !important;
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border-bottom: 1px solid rgba(22, 163, 74, 0.12) !important;
+  box-shadow: var(--shadow-header);
+  transition: box-shadow 0.3s var(--ease);
+}
+
+.app-header-icon {
+  color: var(--green-600);
+  filter: drop-shadow(0 2px 4px rgba(22, 163, 74, 0.25));
+}
+
+.app-header-title {
+  font-family: 'Inter', sans-serif !important;
+  font-weight: 700 !important;
+  background: linear-gradient(135deg, var(--green-700), var(--green-500));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.02em;
+}
+
+.sync-button {
+  background: linear-gradient(135deg, var(--green-600), var(--green-500)) !important;
+  color: white !important;
+  border: none !important;
+  font-weight: 600 !important;
+  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.35);
+  transition: all 0.25s var(--ease) !important;
+}
+
+.sync-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(22, 163, 74, 0.45) !important;
+}
+
+.sync-button:active {
+  transform: translateY(0);
+}
+
+.filter-paper {
+  background: var(--bg-filter) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-md) !important;
+  transition: box-shadow 0.3s var(--ease), border-color 0.3s var(--ease);
+}
+
+.filter-paper:hover {
+  box-shadow: var(--shadow-lg) !important;
+  border-color: var(--green-200) !important;
+}
+
+.filter-title {
+  color: var(--text-h) !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-title::before {
+  content: '';
+  display: inline-block;
+  width: 4px;
+  height: 20px;
+  background: linear-gradient(to bottom, var(--green-500), var(--green-400));
+  border-radius: 2px;
+}
+
+.politician-card {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-sm) !important;
+  overflow: hidden;
+  transition: all 0.35s var(--ease) !important;
+  cursor: default;
+}
+
+.politician-card:hover {
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-card-hover) !important;
+  border-color: var(--green-200) !important;
+}
+
+.politician-card .mantine-Card-section img {
+  transition: transform 0.5s var(--ease);
+  object-fit: cover;
+}
+
+.politician-card:hover .mantine-Card-section img {
+  transform: scale(1.05);
+}
+
+.politician-card .mantine-Card-section {
+  overflow: hidden;
+  position: relative;
+}
+
+.politician-card .mantine-Card-section::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  background: linear-gradient(to top, rgba(255, 255, 255, 0.7), transparent);
+  pointer-events: none;
+}
+
+.politician-card .card-placeholder {
+  background: linear-gradient(135deg, var(--green-50), var(--slate-100)) !important;
+}
+
+.politician-card .card-placeholder svg {
+  color: var(--green-300) !important;
+}
+
+.party-badge {
+  background: var(--green-50) !important;
+  color: var(--green-700) !important;
+  font-weight: 600 !important;
+  font-size: 11px !important;
+  letter-spacing: 0.03em;
+  border: 1px solid var(--green-200) !important;
+}
+
+.politician-name {
+  color: var(--text-h) !important;
+  font-family: 'Inter', sans-serif !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.01em;
+}
+
+.detail-icon {
+  background: var(--green-50) !important;
+  color: var(--green-600) !important;
+  border-radius: 6px;
+}
+
+.detail-text {
+  color: var(--slate-500) !important;
+  font-size: 13px !important;
+}
+
+.empty-state {
+  color: var(--text-muted) !important;
+  font-weight: 500;
+}
+
+@keyframes fadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.politician-card {
+  animation: fadeSlideUp 0.5s var(--ease) both;
+}
+
+.politician-card:nth-child(1) {
+  animation-delay: 0.03s;
+}
+
+.politician-card:nth-child(2) {
+  animation-delay: 0.06s;
+}
+
+.politician-card:nth-child(3) {
+  animation-delay: 0.09s;
+}
+
+.politician-card:nth-child(4) {
+  animation-delay: 0.12s;
+}
+
+.politician-card:nth-child(5) {
+  animation-delay: 0.15s;
+}
+
+.politician-card:nth-child(6) {
+  animation-delay: 0.18s;
+}
+
+.politician-card:nth-child(7) {
+  animation-delay: 0.21s;
+}
+
+.politician-card:nth-child(8) {
+  animation-delay: 0.24s;
+}
+
+.politician-card:nth-child(9) {
+  animation-delay: 0.27s;
+}
+
+.politician-card:nth-child(10) {
+  animation-delay: 0.30s;
+}
+
+.politician-card:nth-child(11) {
+  animation-delay: 0.33s;
+}
+
+.politician-card:nth-child(12) {
+  animation-delay: 0.36s;
+}
+
+.mantine-Select-input:focus {
+  border-color: var(--green-400) !important;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.15) !important;
+}
+
+.mantine-Select-option[data-checked] {
+  background: var(--green-50) !important;
+  color: var(--green-700) !important;
+}
+
+.mantine-LoadingOverlay-root .mantine-Loader-root {
+  --loader-color: var(--green-500);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--slate-100);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--slate-300);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--green-400);
+}
+
+@media (max-width: 768px) {
+  .app-header-title {
+    font-size: 1rem !important;
+  }
+
+  .header-actions {
+    flex-wrap: wrap;
+    gap: 8px !important;
+  }
+}
