@@ -75,7 +75,7 @@ function App() {
 
         <Box pos="relative" style={{ minHeight: 300 }}>
           <LoadingOverlay visible={isLoadingPoliticians} zIndex={1000} overlayProps={{ radius: "sm", blur: 2 }} />
-          <PoliticianGrid politicians={politicians} />
+          <PoliticianGrid politicians={politicians} hasFilters={!!debouncedState || !!debouncedParty} />
         </Box>
       </Container>
     </Box>
