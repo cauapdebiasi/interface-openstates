@@ -1,8 +1,9 @@
 import { Group, Title, Container, Paper, Button, Select } from '@mantine/core';
 import { IconBuildingMonument, IconRefresh, IconClock } from '@tabler/icons-react';
-import { notifications } from '@mantine/notifications';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { syncPeople, getSyncSchedule, updateSyncSchedule } from '../services/api';
+import { notifications } from '@mantine/notifications';
+import { getSyncSchedule, updateSyncSchedule } from '../services/api';
+import { useSyncMutation } from '../hooks/useSyncMutation';
 
 export function Header() {
   const queryClient = useQueryClient();
@@ -12,24 +13,7 @@ export function Header() {
     queryFn: getSyncSchedule,
   });
 
-  const syncMutation = useMutation({
-    mutationFn: syncPeople,
-    onSuccess: () => {
-      notifications.show({
-        title: 'Sucesso',
-        message: 'A atualização de dados foi iniciada em segundo plano!',
-        color: 'green',
-      });
-    },
-    onError: (error: any) => {
-      const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Erro ao iniciar a sincronização';
-      notifications.show({
-        title: 'Atenção',
-        message: errorMessage,
-        color: error.response?.status === 409 ? 'orange' : 'red',
-      });
-    }
-  });
+  const syncMutation = useSyncMutation();
 
   const scheduleMutation = useMutation({
     mutationFn: updateSyncSchedule,
