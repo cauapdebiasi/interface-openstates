@@ -3,6 +3,7 @@ import cors from 'cors';
 import { env } from './config/env.js';
 import sequelize from './config/database.js';
 import './models/Person.js';
+import './models/Setting.js';
 import peopleRoutes from './routes/peopleRoutes.js';
 
 const app = express();
@@ -12,6 +13,8 @@ app.use(express.json());
 
 app.use('/api/v1/people', peopleRoutes);
 
+import { initSchedule } from './services/scheduleService.js';
+
 const startServer = async () => {
   try {
     await sequelize.authenticate();
@@ -20,6 +23,8 @@ const startServer = async () => {
     // TODO: Remover alter: true em produção
     await sequelize.sync({ alter: true });
     console.log('Modelos sincronizados com o banco de dados.');
+
+    await initSchedule();
 
     app.listen(env.PORT, () => {
       console.log(`Servidor rodando na porta ${env.PORT}`);
