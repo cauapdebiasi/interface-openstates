@@ -37,4 +37,14 @@ export const syncPeople = async (): Promise<any> => {
   return response.data;
 };
 
+export const getSyncSchedule = async (): Promise<string> => {
+  const response = await api.get('/people/sync/schedule');
+  return response.data.frequency;
+};
+
+export const updateSyncSchedule = async (frequency: string): Promise<any> => {
+  const response = await api.put('/people/sync/schedule', { frequency });
+  return response.data;
+};
+
 export default api;
