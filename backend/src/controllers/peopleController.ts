@@ -106,3 +106,37 @@ export const syncPeople = (req: Request, res: Response) => {
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: error.message });
   }
 };
+
+import { getSchedule as getCronSchedule, updateSchedule as updateCronSchedule } from '../services/scheduleService.js';
+
+export const getSyncSchedule = async (req: Request, res: Response) => {
+  try {
+    const frequency = await getCronSchedule();
+    res.json({ frequency });
+  } catch (error: any) {
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: error.message });
+  }
+};
+
+const frequencySchema = z.object({
+  frequency: z.enum(['none', 'hourly', 'daily', 'every2days', 'every3days', 'weekly'], {
+    errorMap: () => ({ message: 'Frequência inválida' }),
+  }),
+});
+
+export const updateSyncSchedule = async (req: Request, res: Response) => {
+  try {
+    const parsed = frequencySchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(StatusCodes.UNPROCESSABLE_ENTITY).json({
+        error: 'Frequência inválida',
+        details: z.flattenError(parsed.error),
+      });
+    }
+
+    await updateCronSchedule(parsed.data.frequency);
+    res.json({ message: 'Agendamento atualizado com sucesso', frequency: parsed.data.frequency });
+  } catch (error: any) {
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: error.message });
+  }
+};
