@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { env } from '../config/env.js';
 import { Person } from '../models/Person.js';
+import { Jurisdiction } from '../models/Jurisdiction.js';
 import sequelize from '../config/database.js';
 
 const openstatesApi = axios.create({
@@ -66,6 +67,46 @@ const fetchWithRetries = async (url: string, params: any, retries = 3): Promise<
   }
 };
 
+const savePeopleBatch = async (results: any[]) => {
+  const peopleData = results.map((item: any) => ({
+    id: item.id,
+    name: item.name,
+    role_title: item.current_role?.title || null,
+    party: item.party,
+    state: item.jurisdiction?.name || null,
+    jurisdiction_id: item.jurisdiction?.id || null,
+    image: item.image || null,
+  }));
+
+  await sequelize.transaction(async (t) => {
+    await Person.bulkCreate(peopleData, {
+      updateOnDuplicate: ['name', 'role_title', 'party', 'state', 'jurisdiction_id', 'image'],
+      transaction: t,
+    });
+  });
+};
+
+const saveJurisdictions = async (jurisdictions: any[]) => {
+  const data = jurisdictions.map((j: any) => ({
+    id: j.id,
+    name: j.name,
+    classification: j.classification || null,
+  }));
+
+  await sequelize.transaction(async (t) => {
+    await Jurisdiction.bulkCreate(data, {
+      updateOnDuplicate: ['name', 'classification'],
+      transaction: t,
+    });
+  });
+};
+
+interface JurisdictionTask {
+  name: string;
+  maxPage: number;
+  done: boolean;
+}
+
 const runSyncWorker = async () => {
   try {
     console.log('[Worker] Iniciando sincronização...');
@@ -78,67 +119,77 @@ const runSyncWorker = async () => {
       console.log(`[Worker] Mapeando Jurisdições - Página ${jurCurrentPage}...`);
       const jurRes = await fetchWithRetries('/jurisdictions', {
         classification: 'state',
-        page: jurCurrentPage
         per_page: 52,
+        page: jurCurrentPage,
       });
 
       jurMaxPage = jurRes.data.pagination?.max_page || 1;
       const results = jurRes.data.results || [];
       jurisdictions = jurisdictions.concat(results);
-      await sleep(6100);
       jurCurrentPage++;
     } while (jurCurrentPage <= jurMaxPage);
 
-    console.log(`[Worker] Total de ${jurisdictions.length} jurisdições catalogadas com sucesso. Iniciando Scan de Pessoas...`);
+    if (jurisdictions.length > 0) {
+      await saveJurisdictions(jurisdictions);
+      console.log(`[Worker] ${jurisdictions.length} jurisdições salvas no banco.`);
+    }
 
-    for (const jurisdiction of jurisdictions) {
-      const stateName = jurisdiction.name;
-      let currentPage = 1;
-      let maxPage = 1;
+    console.log(`[Worker] Iniciando varredura horizontal...`);
 
-      do {
-        console.log(`[Worker] Buscando ${stateName} - Página ${currentPage}...`);
+    // Em vez de buscar todas as páginas de um estado antes de ir ao
+    // próximo, busco a página X de TODOS os estados,
+    // depois a página X+1 de todos, e assim por diante.
+    // Pra ter uma variedade maior de dados
+    const tasks: JurisdictionTask[] = jurisdictions.map((j: any) => ({
+      name: j.name,
+      maxPage: 1,
+      done: false,
+    }));
+
+    let currentPageLevel = 1;
+
+    while (tasks.some((t) => !t.done)) {
+      const pendingTasks = tasks.filter((t) => !t.done);
+      console.log(`[Worker] ── Varredura página ${currentPageLevel} | ${pendingTasks.length} jurisdições pendentes ──`);
+
+      for (const task of pendingTasks) {
+        if (currentPageLevel > task.maxPage) {
+          task.done = true;
+          continue;
+        }
 
         try {
+          console.log(`[Worker] Buscando ${task.name} - Página ${currentPageLevel}/${task.maxPage}...`);
+
           const peopleRes = await fetchWithRetries('/people', {
-            jurisdiction: stateName,
+            jurisdiction: task.name,
             per_page: 50,
-            page: currentPage,
+            page: currentPageLevel,
           });
 
-          maxPage = peopleRes.data.pagination?.max_page || 1;
+          task.maxPage = peopleRes.data.pagination?.max_page || 1;
           const results = peopleRes.data.results || [];
 
           if (results.length > 0) {
-            const peopleData = results.map((item: any) => ({
-              id: item.id,
-              name: item.name,
-              role_title: item.current_role?.title || null,
-              party: item.party,
-              state: item.jurisdiction?.name || null,
-              image: item.image || null,
-            }));
+            await savePeopleBatch(results);
+            console.log(`[Worker] -> ${results.length} salvos em ${task.name} (Página ${currentPageLevel}/${task.maxPage})`);
+          }
 
-            await sequelize.transaction(async (t) => {
-              await Person.bulkCreate(peopleData, {
-                updateOnDuplicate: ['name', 'role_title', 'party', 'state', 'image'],
-                transaction: t,
-              });
-            });
-            console.log(`[Worker] -> ${results.length} salvos em ${stateName} (Page ${currentPage}/${maxPage})`);
+          if (currentPageLevel >= task.maxPage) {
+            task.done = true;
           }
 
         } catch (pageError) {
-          console.error(`[Worker] Erro final (após retries) ao buscar ${stateName} - Página ${currentPage}: O processo continuará para a próxima!`, pageError);
+          console.error(`[Worker] Erro ao buscar ${task.name} - Página ${currentPageLevel}. Continuando...`, pageError);
+          // Em caso de erro, marca como done para não travar o loop nessa jurisdição
+          task.done = true;
         }
+      }
 
-        await sleep(6100);
-        currentPage++;
-
-      } while (currentPage <= maxPage);
+      currentPageLevel++;
     }
 
-    console.log('[Worker] Sincronização concluída com Sucesso!');
+    console.log('[Worker] Sincronização concluída com sucesso!');
   } catch (globalError) {
     console.error('[Worker] Falha na sincronização:', globalError);
   } finally {
@@ -153,10 +204,11 @@ export const triggerBackgroundSync = () => {
 
   isSyncing = true;
 
-  runSyncWorker().catch(e => {
+  runSyncWorker().catch((e) => {
     console.error('[Worker] Erro ao executar sincronização:', e);
     isSyncing = false;
   });
 
   return { status: 'accepted', message: 'Job de Sincronização disparado em background!' };
 };
+
