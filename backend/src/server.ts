@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import { env } from './config/env.js';
 import sequelize from './config/database.js';
-import './models/Person.js';
+import './models/associations.js';
 import './models/Setting.js';
 import peopleRoutes from './routes/peopleRoutes.js';
 

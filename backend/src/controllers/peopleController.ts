@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { Person } from '../models/Person.js';
+import { Jurisdiction } from '../models/Jurisdiction.js';
 import { triggerBackgroundSync } from '../services/openstatesService.js';
 import { Op } from 'sequelize';
 import { z } from 'zod';
@@ -18,8 +19,11 @@ const getPeopleQuerySchema = z.object({
 
 export const getStatesData = async (req: Request, res: Response) => {
   try {
-    const states = await Person.aggregate('state', 'DISTINCT', { plain: false }) as { DISTINCT: string }[];
-    res.json({ results: states.map((s) => s.DISTINCT).filter(Boolean).sort() });
+    const jurisdictions = await Jurisdiction.findAll({
+      attributes: ['name'],
+      order: [['name', 'ASC']],
+    });
+    res.json({ results: jurisdictions.map((j) => j.name).filter(Boolean) });
   } catch (error) {
     console.error('Erro ao mapear estados:', error);
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: 'Erro ao buscar listagem de estados' });
@@ -69,6 +73,11 @@ export const getPeople = async (req: Request, res: Response) => {
     // Busca 1 a mais pra saber se tem próxima página
     const people = await Person.findAll({
       where: whereClause,
+      include: [{
+        model: Jurisdiction,
+        as: 'jurisdiction',
+        attributes: ['id', 'name'],
+      }],
       order: [['name', 'ASC'], ['id', 'ASC']],
       limit: limit + 1,
     });

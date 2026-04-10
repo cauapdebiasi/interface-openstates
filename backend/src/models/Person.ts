@@ -7,6 +7,7 @@ export class Person extends Model {
   public declare role_title: string;
   public declare party: string;
   public declare state: string;
+  public declare jurisdiction_id: string | null;
   public declare image: string | null;
 }
 
@@ -33,6 +34,14 @@ Person.init(
       type: DataTypes.STRING,
       allowNull: true,
     },
+    jurisdiction_id: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      references: {
+        model: 'jurisdictions',
+        key: 'id',
+      },
+    },
     image: {
       type: DataTypes.TEXT,
       allowNull: true,
@@ -44,3 +53,4 @@ Person.init(
     timestamps: true,
   }
 );
+
