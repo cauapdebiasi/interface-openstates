@@ -102,6 +102,7 @@ const saveJurisdictions = async (jurisdictions: any[]) => {
 };
 
 interface JurisdictionTask {
+  id: string;
   name: string;
   maxPage: number;
   done: boolean;
@@ -134,13 +135,23 @@ const runSyncWorker = async () => {
       console.log(`[Worker] ${jurisdictions.length} jurisdições salvas no banco.`);
     }
 
+    // prioriza estados que nunca foram sincronizados ou sincronizados há mais tempo
+    const orderedJurisdictions = await Jurisdiction.findAll({
+      order: [
+        [sequelize.literal('last_synced_at IS NOT NULL'), 'ASC'],
+        ['last_synced_at', 'ASC'],
+        ['name', 'ASC'],
+      ],
+    });
+
     console.log(`[Worker] Iniciando varredura horizontal...`);
 
     // Em vez de buscar todas as páginas de um estado antes de ir ao
     // próximo, busco a página X de TODOS os estados,
     // depois a página X+1 de todos, e assim por diante.
     // Pra ter uma variedade maior de dados
-    const tasks: JurisdictionTask[] = jurisdictions.map((j: any) => ({
+    const tasks: JurisdictionTask[] = orderedJurisdictions.map((j) => ({
+      id: j.id,
       name: j.name,
       maxPage: 1,
       done: false,
@@ -177,11 +188,14 @@ const runSyncWorker = async () => {
 
           if (currentPageLevel >= task.maxPage) {
             task.done = true;
+            await Jurisdiction.update(
+              { last_synced_at: new Date() },
+              { where: { id: task.id } }
+            );
           }
 
         } catch (pageError) {
           console.error(`[Worker] Erro ao buscar ${task.name} - Página ${currentPageLevel}. Continuando...`, pageError);
-          // Em caso de erro, marca como done para não travar o loop nessa jurisdição
           task.done = true;
         }
       }

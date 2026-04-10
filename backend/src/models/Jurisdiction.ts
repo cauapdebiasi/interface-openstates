@@ -5,6 +5,7 @@ export class Jurisdiction extends Model {
   public declare id: string;
   public declare name: string;
   public declare classification: string;
+  public declare last_synced_at: Date | null;
 }
 
 Jurisdiction.init(
@@ -22,6 +23,11 @@ Jurisdiction.init(
       type: DataTypes.STRING,
       allowNull: true,
     },
+    last_synced_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      defaultValue: null,
+    },
   },
   {
     sequelize,
@@ -29,3 +35,4 @@ Jurisdiction.init(
     timestamps: true,
   }
 );
+
