@@ -17,6 +17,27 @@ vi.mock('axios', () => {
   };
 });
 
+vi.mock('../models/Jurisdiction.js', () => ({
+  Jurisdiction: {
+    bulkCreate: vi.fn(),
+    findAll: vi.fn().mockResolvedValue([]),
+    update: vi.fn(),
+  },
+}));
+
+vi.mock('../models/Person.js', () => ({
+  Person: {
+    bulkCreate: vi.fn(),
+  },
+}));
+
+vi.mock('../config/database.js', () => ({
+  default: {
+    transaction: vi.fn((cb: any) => cb({})),
+    literal: vi.fn((val: string) => val),
+  },
+}));
+
 describe('OpenStates Service - Sincronização em background', () => {
   beforeEach(() => {
     vi.clearAllMocks();
