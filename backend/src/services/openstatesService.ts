@@ -10,12 +10,43 @@ const openstatesApi = axios.create({
   },
 });
 
-// Delay de 6.1s pois a api só permite 10 requests/min, coloquei 100 ms a mais pois estava bloqueando
-const OPENSTATES_DELAY = 6100;
-const OPENSTATES_DELAY_SECONDS = OPENSTATES_DELAY / 1000;
+const MAX_REQUESTS_PER_WINDOW = 10;
+const WINDOW_MS = 60_000;
+const SAFETY_BUFFER_MS = 200;
 
-// Tava dando erro nos testes, então quando for teste, diminui o delay pra 1ms
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, process.env.NODE_ENV === 'test' ? 1 : ms));
+const requestTimestamps: number[] = [];
+
+const isTestEnv = () => process.env.NODE_ENV === 'test';
+
+const sleep = (ms: number) =>
+  new Promise((resolve) => setTimeout(resolve, isTestEnv() ? 1 : ms));
+
+// A API permite 10 requests por minuto
+// Em vez de esperar um delay fixo entre cada request, armazenamos
+// os timestamps das últimas requisições e quando a última passar um minuto
+// libero o espaço para mais 10 requests
+const waitForRateLimit = async (): Promise<void> => {
+  if (isTestEnv()) return;
+
+  while (true) {
+    const now = Date.now();
+
+    while (requestTimestamps.length > 0 && now - requestTimestamps[0] >= WINDOW_MS) {
+      requestTimestamps.shift();
+    }
+
+    if (requestTimestamps.length < MAX_REQUESTS_PER_WINDOW) {
+      requestTimestamps.push(now);
+      return;
+    }
+
+    // espero até o mais antigo sair da janela
+    const oldestTimestamp = requestTimestamps[0];
+    const waitTime = WINDOW_MS - (now - oldestTimestamp) + SAFETY_BUFFER_MS;
+    console.log(`[RateLimiter] Janela cheia (${requestTimestamps.length}/${MAX_REQUESTS_PER_WINDOW}). Aguardando ${(waitTime / 1000).toFixed(1)}s...`);
+    await sleep(waitTime);
+  }
+};
 
 export let isSyncing = false;
 
@@ -25,11 +56,12 @@ export const resetSyncingStateForTests = () => { isSyncing = false; };
 const fetchWithRetries = async (url: string, params: any, retries = 3): Promise<any> => {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
+      await waitForRateLimit();
       return await openstatesApi.get(url, { params });
     } catch (error: any) {
       if (attempt === retries) throw error;
-      console.warn(`[Worker] Falha na tentativa ${attempt} para ${url}. Tentando novamente em ${OPENSTATES_DELAY_SECONDS}s...`);
-      await sleep(OPENSTATES_DELAY);
+      console.warn(`[Worker] Falha na tentativa ${attempt} para ${url}. Retentando...`);
+      await sleep(2000);
     }
   }
 };
