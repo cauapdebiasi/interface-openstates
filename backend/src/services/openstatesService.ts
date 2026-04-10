@@ -78,8 +78,8 @@ const runSyncWorker = async () => {
       console.log(`[Worker] Mapeando Jurisdições - Página ${jurCurrentPage}...`);
       const jurRes = await fetchWithRetries('/jurisdictions', {
         classification: 'state',
-        per_page: 50,
         page: jurCurrentPage
+        per_page: 52,
       });
 
       jurMaxPage = jurRes.data.pagination?.max_page || 1;
