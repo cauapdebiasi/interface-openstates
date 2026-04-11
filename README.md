@@ -15,7 +15,7 @@ Aplicação fullstack que consome dados públicos de pessoas em cargos político
 **1. Clone o repositório:**
 
 ```bash
-git clone https://github.com/cauapdebiasi/teste-tecnico-openstates.git
+git clone https://github.com/cauapdebiasi/interface-openstates.git
 cd teste-tecnico-openstates
 ```
 
