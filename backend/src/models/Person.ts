@@ -7,6 +7,9 @@ export class Person extends Model {
   public declare role_title: string;
   public declare party: string;
   public declare jurisdiction_id: string | null;
+  public declare gender: string | null;
+  public declare birth_date: string | null;
+  public declare death_date: string | null;
   public declare image: string | null;
 }
 
@@ -39,6 +42,18 @@ Person.init(
     },
     image: {
       type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    gender: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    birth_date: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    death_date: {
+      type: DataTypes.STRING,
       allowNull: true,
     },
   },
