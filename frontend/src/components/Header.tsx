@@ -45,8 +45,9 @@ export function Header() {
             </Title>
           </Group>
 
-          <Group className="header-actions" gap="md">
+          <Group className="header-actions" gap="md" align="flex-end">
             <Select
+              label="Sincronização automática"
               leftSection={<IconClock size={16} />}
               placeholder="Agendamento"
               data={[
