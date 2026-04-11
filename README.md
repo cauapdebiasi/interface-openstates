@@ -98,8 +98,17 @@ npm run dev
 
 ## Testes
 
+**Backend:**
+
 ```bash
 cd backend
+npm test
+```
+
+**Frontend:**
+
+```bash
+cd frontend
 npm test
 ```
 
@@ -154,6 +163,9 @@ Todos os endpoints estão sob o prefixo `/api/v1/people`.
       "name": "John Doe",
       "role_title": "Senator",
       "party": "Democratic",
+      "gender": "male",
+      "birth_date": "1960-05-04",
+      "death_date": null,
       "jurisdiction_id": "ocd-jurisdiction/...",
       "jurisdiction": {
         "id": "ocd-jurisdiction/...",
