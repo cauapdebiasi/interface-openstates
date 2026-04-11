@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Container, Grid, Select, Box, Title, LoadingOverlay, Paper } from '@mantine/core';
 import { useDebouncedValue } from '@mantine/hooks';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 import { Header } from './components/Header';
 import { PoliticianGrid } from './components/PoliticianGrid';
 import { getPeople, getStates, getParties } from './services/api';
@@ -26,10 +26,24 @@ function App() {
     },
   });
 
-  const { data: politicians = [], isLoading: isLoadingPoliticians } = useQuery({
+  const {
+    data,
+    isLoading: isLoadingPoliticians,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
     queryKey: ['people', debouncedState, debouncedParty],
-    queryFn: () => getPeople(debouncedState || undefined, debouncedParty || undefined),
+    queryFn: ({ pageParam }) =>
+      getPeople(debouncedState || undefined, debouncedParty || undefined, pageParam || undefined),
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) => lastPage.pagination?.next_cursor ?? undefined,
   });
+
+  const politicians = useMemo(
+    () => data?.pages.flatMap((page) => page.results) ?? [],
+    [data]
+  );
 
   return (
     <Box mih="100vh" pb="xl">
@@ -72,7 +86,13 @@ function App() {
 
         <Box pos="relative" style={{ minHeight: 300 }}>
           <LoadingOverlay visible={isLoadingPoliticians} zIndex={1000} overlayProps={{ radius: "sm", blur: 2 }} />
-          <PoliticianGrid politicians={politicians} hasFilters={!!debouncedState || !!debouncedParty} />
+          <PoliticianGrid
+            politicians={politicians}
+            hasFilters={!!debouncedState || !!debouncedParty}
+            onLoadMore={() => fetchNextPage()}
+            hasMore={!!hasNextPage}
+            isLoadingMore={isFetchingNextPage}
+          />
         </Box>
       </Container>
     </Box>

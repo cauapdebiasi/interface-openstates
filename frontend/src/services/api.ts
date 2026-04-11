@@ -16,13 +16,21 @@ export interface Politician {
   } | null;
 }
 
-export const getPeople = async (jurisdictionId?: string, party?: string): Promise<Politician[]> => {
+export interface PeopleResponse {
+  results: Politician[];
+  pagination: {
+    next_cursor: string | null;
+  };
+}
+
+export const getPeople = async (jurisdictionId?: string, party?: string, cursor?: string): Promise<PeopleResponse> => {
   const params = new URLSearchParams();
   if (jurisdictionId) params.append('jurisdiction_id', jurisdictionId);
   if (party) params.append('party', party);
+  if (cursor) params.append('cursor', cursor);
 
   const response = await api.get('/people', { params });
-  return response.data.results || [];
+  return response.data;
 };
 
 export const getStates = async (): Promise<{ value: string; label: string }[]> => {
