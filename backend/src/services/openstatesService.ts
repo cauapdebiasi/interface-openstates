@@ -54,15 +54,38 @@ export let isSyncing = false;
 // para limpar o estado nos testes
 export const resetSyncingStateForTests = () => { isSyncing = false; };
 
-const fetchWithRetries = async (url: string, params: any, retries = 3): Promise<any> => {
+class DailyLimitError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'DailyLimitError';
+  }
+}
+
+const fetchWithRetries = async (url: string, params: any, retries = 4): Promise<any> => {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       await waitForRateLimit();
       return await openstatesApi.get(url, { params });
     } catch (error: any) {
+      const status = error?.response?.status;
+      const detail = error?.response?.data?.detail || '';
+
+      // Se a api retornar limite diário excedido, aborta tudo
+      if (status === 429 && /day/i.test(detail)) {
+        throw new DailyLimitError(`Limite diário atingido: ${detail}`);
+      }
+
       if (attempt === retries) throw error;
-      console.warn(`[Worker] Falha na tentativa ${attempt} para ${url}. Retentando...`);
-      await sleep(2000);
+
+      // espera exponencial para 429 (rate limit por minuto)
+      if (status === 429) {
+        const backoff = Math.min(3000 * Math.pow(2, attempt - 1), WINDOW_MS); // 3s, 6s, 12s... máx 60s
+        console.warn(`[Worker] 429 na tentativa ${attempt} para ${url}. Aguardando ${(backoff / 1000).toFixed(0)}s...`);
+        await sleep(backoff);
+      } else {
+        console.warn(`[Worker] Falha na tentativa ${attempt} para ${url}. Retentando em 2s...`);
+        await sleep(2000);
+      }
     }
   }
 };
@@ -196,8 +219,14 @@ const runSyncWorker = async () => {
             );
           }
 
-        } catch (pageError) {
-          console.error(`[Worker] Erro ao buscar ${task.name} - Página ${currentPageLevel}. Continuando...`, pageError);
+        } catch (pageError: any) {
+          // se atingiu o limite diário não adianta continuar
+          if (pageError instanceof DailyLimitError) {
+            console.warn(`[Worker] ${pageError.message}. Abortando sincronização.`);
+            throw pageError;
+          }
+
+          console.error(`[Worker] Erro ao buscar ${task.name} - Página ${currentPageLevel}. Continuando...`);
           task.done = true;
         }
       }
