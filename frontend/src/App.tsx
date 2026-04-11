@@ -1,17 +1,17 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { Container, Grid, Select, Box, Title, LoadingOverlay, Paper } from '@mantine/core';
-import { useDebouncedValue } from '@mantine/hooks';
 import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 import { Header } from './components/Header';
 import { PoliticianGrid } from './components/PoliticianGrid';
 import { getPeople, getStates, getParties } from './services/api';
+import { useUrlFilters } from './hooks/useUrlFilters';
 
 function App() {
-  const [selectedState, setSelectedState] = useState<string | null>(null);
-  const [selectedParty, setSelectedParty] = useState<string | null>(null);
-
-  const [debouncedState] = useDebouncedValue(selectedState, 300);
-  const [debouncedParty] = useDebouncedValue(selectedParty, 300);
+  const {
+    selectedState, setSelectedState,
+    selectedParty, setSelectedParty,
+    debouncedState, debouncedParty,
+  } = useUrlFilters();
 
   const { data: states = [], isLoading: isLoadingStates } = useQuery({
     queryKey: ['states'],
