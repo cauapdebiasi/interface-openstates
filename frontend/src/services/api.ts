@@ -10,6 +10,9 @@ export interface Politician {
   role_title: string | null;
   image: string | null;
   party: string | null;
+  gender: string | null;
+  birth_date: string | null;
+  death_date: string | null;
   jurisdiction: {
     id: string;
     name: string;
