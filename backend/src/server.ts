@@ -5,6 +5,8 @@ import sequelize from './config/database.js';
 import './models/associations.js';
 import './models/Setting.js';
 import peopleRoutes from './routes/peopleRoutes.js';
+import statesRoutes from './routes/statesRoutes.js';
+import partiesRoutes from './routes/partiesRoutes.js';
 
 const app = express();
 
@@ -12,6 +14,8 @@ app.use(cors());
 app.use(express.json());
 
 app.use('/api/v1/people', peopleRoutes);
+app.use('/api/v1/states', statesRoutes);
+app.use('/api/v1/parties', partiesRoutes);
 
 import { initSchedule } from './services/scheduleService.js';
 

@@ -37,12 +37,12 @@ export const getPeople = async (jurisdictionId?: string, party?: string, cursor?
 };
 
 export const getStates = async (): Promise<{ value: string; label: string }[]> => {
-  const response = await api.get('/people/states');
+  const response = await api.get('/states');
   return response.data.results || [];
 };
 
 export const getParties = async (): Promise<string[]> => {
-  const response = await api.get('/people/parties');
+  const response = await api.get('/parties');
   return response.data.results || [];
 };
 

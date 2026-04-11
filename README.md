@@ -134,17 +134,15 @@ O backend funciona como um **cache ativo**: os dados da API externa são sincron
 
 ## Endpoints da API
 
-Todos os endpoints estão sob o prefixo `/api/v1/people`.
+Todos os endpoints estão sob o prefixo `/api/v1`.
 
-### Pessoas
+### Pessoas (`/people`)
 
-| Método | Rota            | Descrição                                       |
-| ------ | --------------- | ----------------------------------------------- |
-| `GET`  | `/`             | Lista pessoas com paginação por cursor           |
-| `GET`  | `/states`       | Lista jurisdições (estados) disponíveis          |
-| `GET`  | `/parties`      | Lista partidos disponíveis                       |
+| Método | Rota   | Descrição                             |
+| ------ | ------ | ------------------------------------- |
+| `GET`  | `/`    | Lista pessoas com paginação por cursor |
 
-**Parâmetros de query em `GET /`:**
+**Parâmetros de query em `GET /people`:**
 
 | Parâmetro         | Tipo     | Descrição                                |
 | ----------------- | -------- | ---------------------------------------- |
@@ -153,7 +151,7 @@ Todos os endpoints estão sob o prefixo `/api/v1/people`.
 | `cursor`          | `string` | Cursor para paginação                    |
 | `limit`           | `number` | Itens por página (1-50, padrão: 30)      |
 
-**Exemplo de resposta `GET /`:**
+**Exemplo de resposta `GET /people`:**
 
 ```json
 {
@@ -180,7 +178,19 @@ Todos os endpoints estão sob o prefixo `/api/v1/people`.
 }
 ```
 
-### Sincronização
+### Estados (`/states`)
+
+| Método | Rota   | Descrição                               |
+| ------ | ------ | --------------------------------------- |
+| `GET`  | `/`    | Lista jurisdições (estados) disponíveis |
+
+### Partidos (`/parties`)
+
+| Método | Rota   | Descrição                  |
+| ------ | ------ | -------------------------- |
+| `GET`  | `/`    | Lista partidos disponíveis |
+
+### Sincronização (`/people`)
 
 | Método | Rota              | Descrição                                    |
 | ------ | ----------------- | -------------------------------------------- |
