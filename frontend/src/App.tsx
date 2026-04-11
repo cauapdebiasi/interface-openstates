@@ -15,10 +15,7 @@ function App() {
 
   const { data: states = [], isLoading: isLoadingStates } = useQuery({
     queryKey: ['states'],
-    queryFn: async () => {
-      const data = await getStates();
-      return data.filter(Boolean);
-    },
+    queryFn: getStates,
   });
 
   const { data: parties = [], isLoading: isLoadingParties } = useQuery({

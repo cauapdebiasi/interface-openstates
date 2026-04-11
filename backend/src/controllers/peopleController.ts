@@ -8,7 +8,7 @@ import { StatusCodes } from 'http-status-codes';
 import { encodeCursor, decodeCursor } from '../utils/cursorUtils.js';
 
 const getPeopleQuerySchema = z.object({
-  state: z.string({ message: 'O filtro de estado deve ser um texto válido' }).optional(),
+  jurisdiction_id: z.string({ message: 'O filtro de jurisdição deve ser um texto válido' }).optional(),
   party: z.string({ message: 'O filtro de partido deve ser um texto válido' }).optional(),
   cursor: z.string().optional(),
   limit: z.coerce.number({ message: 'O limite deve ser um número válido' })
@@ -20,10 +20,14 @@ const getPeopleQuerySchema = z.object({
 export const getStatesData = async (req: Request, res: Response) => {
   try {
     const jurisdictions = await Jurisdiction.findAll({
-      attributes: ['name'],
+      attributes: ['id', 'name'],
       order: [['name', 'ASC']],
     });
-    res.json({ results: jurisdictions.map((j) => j.name).filter(Boolean) });
+    res.json({
+      results: jurisdictions
+        .filter((j) => j.name)
+        .map((j) => ({ value: j.id, label: j.name })),
+    });
   } catch (error) {
     console.error('Erro ao mapear estados:', error);
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: 'Erro ao buscar listagem de estados' });
@@ -51,10 +55,10 @@ export const getPeople = async (req: Request, res: Response) => {
       });
     }
 
-    const { state, party, cursor, limit } = query.data;
+    const { jurisdiction_id, party, cursor, limit } = query.data;
 
     const whereClause: any = {};
-    if (state) whereClause.state = state;
+    if (jurisdiction_id) whereClause.jurisdiction_id = jurisdiction_id;
     if (party) whereClause.party = party;
 
     if (cursor) {

@@ -73,14 +73,13 @@ const savePeopleBatch = async (results: any[]) => {
     name: item.name,
     role_title: item.current_role?.title || null,
     party: item.party,
-    state: item.jurisdiction?.name || null,
     jurisdiction_id: item.jurisdiction?.id || null,
     image: item.image || null,
   }));
 
   await sequelize.transaction(async (t) => {
     await Person.bulkCreate(peopleData, {
-      updateOnDuplicate: ['name', 'role_title', 'party', 'state', 'jurisdiction_id', 'image'],
+      updateOnDuplicate: ['name', 'role_title', 'party', 'jurisdiction_id', 'image'],
       transaction: t,
     });
   });

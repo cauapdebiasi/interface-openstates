@@ -6,7 +6,6 @@ export class Person extends Model {
   public declare name: string;
   public declare role_title: string;
   public declare party: string;
-  public declare state: string;
   public declare jurisdiction_id: string | null;
   public declare image: string | null;
 }
@@ -27,10 +26,6 @@ Person.init(
       allowNull: true,
     },
     party: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-    state: {
       type: DataTypes.STRING,
       allowNull: true,
     },

@@ -9,20 +9,23 @@ export interface Politician {
   name: string;
   role_title: string | null;
   image: string | null;
-  state: string | null;
   party: string | null;
+  jurisdiction: {
+    id: string;
+    name: string;
+  } | null;
 }
 
-export const getPeople = async (state?: string, party?: string): Promise<Politician[]> => {
+export const getPeople = async (jurisdictionId?: string, party?: string): Promise<Politician[]> => {
   const params = new URLSearchParams();
-  if (state) params.append('state', state);
+  if (jurisdictionId) params.append('jurisdiction_id', jurisdictionId);
   if (party) params.append('party', party);
 
   const response = await api.get('/people', { params });
   return response.data.results || [];
 };
 
-export const getStates = async (): Promise<string[]> => {
+export const getStates = async (): Promise<{ value: string; label: string }[]> => {
   const response = await api.get('/people/states');
   return response.data.results || [];
 };

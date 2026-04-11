@@ -47,12 +47,12 @@ export function PoliticianCard({ politician }: PoliticianCardProps) {
           </Group>
         )}
 
-        {politician.state && (
+        {politician.jurisdiction?.name && (
           <Group gap="xs" wrap="nowrap">
             <ThemeIcon className="detail-icon" size="sm">
               <IconMapPin size={14} />
             </ThemeIcon>
-            <Text className="detail-text" size="sm">{politician.state}</Text>
+            <Text className="detail-text" size="sm">{politician.jurisdiction.name}</Text>
           </Group>
         )}
       </Stack>
