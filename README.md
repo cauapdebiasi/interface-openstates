@@ -21,6 +21,20 @@ cd interface-openstates
 
 **2. Crie os arquivos `.env`:**
 
+Na raiz do **projeto**:
+
+```env
+PORT=3000
+DB_NAME=openstates_db
+DB_USER=postgres
+DB_PASS=postgres
+DB_HOST=db
+DB_PORT=5432
+OPENSTATES_API_KEY=sua_chave_aqui
+VITE_API_URL=http://localhost:3000/api/v1/
+FRONTEND_PORT=5000
+```
+
 Na raiz do **backend** (`backend/.env`):
 
 ```env
