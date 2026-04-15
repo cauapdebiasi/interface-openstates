@@ -1,75 +1,7 @@
-import axios, { AxiosResponse } from 'axios';
-import { env } from '../config/env.js';
 import { Person } from '../models/Person.js';
 import { Jurisdiction } from '../models/Jurisdiction.js';
 import sequelize from '../config/database.js';
-
-interface OpenStatesResult {
-  id: string;
-  name: string;
-  party?: string;
-  current_role?: { title?: string };
-  jurisdiction?: { id?: string; name?: string };
-  gender?: string;
-  birth_date?: string;
-  death_date?: string;
-  image?: string;
-  classification?: string;
-}
-
-interface OpenStatesPagination {
-  max_page?: number;
-}
-
-interface OpenStatesResponse {
-  results: OpenStatesResult[];
-  pagination?: OpenStatesPagination;
-}
-
-const openstatesApi = axios.create({
-  baseURL: 'https://v3.openstates.org',
-  headers: {
-    'x-api-key': env.OPENSTATES_API_KEY,
-  },
-});
-
-const MAX_REQUESTS_PER_WINDOW = 10;
-const WINDOW_MS = 60_000;
-const SAFETY_BUFFER_MS = 200;
-
-const requestTimestamps: number[] = [];
-
-const isTestEnv = () => process.env.NODE_ENV === 'test';
-
-const sleep = (ms: number) =>
-  new Promise((resolve) => setTimeout(resolve, isTestEnv() ? 1 : ms));
-
-// A API permite 10 requests por minuto
-// Em vez de esperar um delay fixo entre cada request, armazenamos
-// os timestamps das últimas requisições e quando a última passar um minuto
-// libero o espaço para mais 10 requests
-const waitForRateLimit = async (): Promise<void> => {
-  if (isTestEnv()) return;
-
-  while (true) {
-    const now = Date.now();
-
-    while (requestTimestamps.length > 0 && now - requestTimestamps[0] >= WINDOW_MS) {
-      requestTimestamps.shift();
-    }
-
-    if (requestTimestamps.length < MAX_REQUESTS_PER_WINDOW) {
-      requestTimestamps.push(now);
-      return;
-    }
-
-    // espero até o mais antigo sair da janela
-    const oldestTimestamp = requestTimestamps[0];
-    const waitTime = WINDOW_MS - (now - oldestTimestamp) + SAFETY_BUFFER_MS;
-    console.log(`[RateLimiter] Janela cheia (${requestTimestamps.length}/${MAX_REQUESTS_PER_WINDOW}). Aguardando ${(waitTime / 1000).toFixed(1)}s...`);
-    await sleep(waitTime);
-  }
-};
+import { fetchWithRetries, DailyLimitError, OpenStatesResult } from './openstatesApi.js';
 
 export let isSyncing = false;
 let shouldCancel = false;
@@ -82,10 +14,7 @@ interface SyncProgress {
 
 const syncProgress: SyncProgress = { synced: 0, total: 0, current: null };
 
-export const getSyncProgress = () => ({
-  isSyncing,
-  ...syncProgress,
-});
+export const getSyncProgress = () => ({ isSyncing, ...syncProgress });
 
 export const cancelSync = () => {
   if (!isSyncing) return false;
@@ -93,45 +22,9 @@ export const cancelSync = () => {
   return true;
 };
 
-// para limpar o estado nos testes
-export const resetSyncingStateForTests = () => { isSyncing = false; shouldCancel = false; };
-
-class DailyLimitError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'DailyLimitError';
-  }
-}
-
-const fetchWithRetries = async (url: string, params: Record<string, unknown>, retries = 4): Promise<AxiosResponse<OpenStatesResponse>> => {
-  for (let attempt = 1; attempt <= retries; attempt++) {
-    try {
-      await waitForRateLimit();
-      return await openstatesApi.get(url, { params });
-    } catch (error: unknown) {
-      const status = axios.isAxiosError(error) ? error.response?.status : undefined;
-      const detail = axios.isAxiosError(error) ? (error.response?.data as Record<string, string>)?.detail || '' : '';
-
-      // Se a api retornar limite diário excedido, aborta tudo
-      if (status === 429 && /day/i.test(detail)) {
-        throw new DailyLimitError(`Limite diário atingido: ${detail}`);
-      }
-
-      if (attempt === retries) throw error;
-
-      // espera exponencial para 429 (rate limit por minuto)
-      if (status === 429) {
-        const backoff = Math.min(3000 * Math.pow(2, attempt - 1), WINDOW_MS); // 3s, 6s, 12s... máx 60s
-        console.warn(`[Worker] 429 na tentativa ${attempt} para ${url}. Aguardando ${(backoff / 1000).toFixed(0)}s...`);
-        await sleep(backoff);
-      } else {
-        console.warn(`[Worker] Falha na tentativa ${attempt} para ${url}. Retentando em 2s...`);
-        await sleep(2000);
-      }
-    }
-  }
-
-  throw new Error(`Todas as ${retries} tentativas falharam para ${url}`);
+export const resetSyncingStateForTests = () => {
+  isSyncing = false;
+  shouldCancel = false;
 };
 
 const savePeopleBatch = async (results: OpenStatesResult[]) => {
@@ -170,6 +63,15 @@ const saveJurisdictions = async (jurisdictions: OpenStatesResult[]) => {
   });
 };
 
+const checkCancel = () => {
+  if (shouldCancel) throw new Error('Sincronização cancelada pelo usuário.');
+};
+
+const markDone = (task: JurisdictionTask, tasks: JurisdictionTask[]) => {
+  task.done = true;
+  syncProgress.synced = tasks.filter((t) => t.done).length;
+};
+
 interface JurisdictionTask {
   id: string;
   name: string;
@@ -177,34 +79,80 @@ interface JurisdictionTask {
   done: boolean;
 }
 
+const fetchAllJurisdictions = async (): Promise<OpenStatesResult[]> => {
+  let jurisdictions: OpenStatesResult[] = [];
+  let page = 1;
+  let maxPage = 1;
+
+  do {
+    checkCancel();
+    console.log(`[Worker] Mapeando Jurisdições - Página ${page}...`);
+
+    const res = await fetchWithRetries('/jurisdictions', {
+      classification: 'state',
+      per_page: 52,
+      page,
+    });
+
+    maxPage = res.data.pagination?.max_page || 1;
+    jurisdictions = jurisdictions.concat(res.data.results || []);
+    page++;
+  } while (page <= maxPage);
+
+  return jurisdictions;
+};
+
+const processTask = async (task: JurisdictionTask, tasks: JurisdictionTask[], pageLevel: number) => {
+  if (pageLevel > task.maxPage) {
+    markDone(task, tasks);
+    return;
+  }
+
+  try {
+    syncProgress.current = task.name;
+    console.log(`[Worker] Buscando ${task.name} - Página ${pageLevel}/${task.maxPage}...`);
+
+    const res = await fetchWithRetries('/people', {
+      jurisdiction: task.name,
+      per_page: 50,
+      page: pageLevel,
+    });
+
+    task.maxPage = res.data.pagination?.max_page || 1;
+    const results = res.data.results || [];
+
+    if (results.length > 0) {
+      await savePeopleBatch(results);
+      console.log(`[Worker] -> ${results.length} salvos em ${task.name} (Página ${pageLevel}/${task.maxPage})`);
+    }
+
+    if (pageLevel >= task.maxPage) {
+      markDone(task, tasks);
+      await Jurisdiction.update(
+        { last_synced_at: new Date() },
+        { where: { id: task.id } },
+      );
+    }
+  } catch (error: unknown) {
+    if (error instanceof DailyLimitError) {
+      console.warn(`[Worker] ${error.message}. Abortando sincronização.`);
+      throw error;
+    }
+    if (error instanceof Error && error.message?.includes('cancelada')) throw error;
+
+    console.error(`[Worker] Erro ao buscar ${task.name} - Página ${pageLevel}. Continuando...`);
+    markDone(task, tasks);
+  }
+};
+
 const runSyncWorker = async () => {
   try {
     console.log('[Worker] Iniciando sincronização...');
-
-    // reseta progresso
     syncProgress.synced = 0;
     syncProgress.total = 0;
     syncProgress.current = null;
 
-    let jurisdictions: OpenStatesResult[] = [];
-    let jurCurrentPage = 1;
-    let jurMaxPage = 1;
-
-    do {
-      if (shouldCancel) throw new Error('Sincronização cancelada pelo usuário.');
-
-      console.log(`[Worker] Mapeando Jurisdições - Página ${jurCurrentPage}...`);
-      const jurRes = await fetchWithRetries('/jurisdictions', {
-        classification: 'state',
-        per_page: 52,
-        page: jurCurrentPage,
-      });
-
-      jurMaxPage = jurRes.data.pagination?.max_page || 1;
-      const results = jurRes.data.results || [];
-      jurisdictions = jurisdictions.concat(results);
-      jurCurrentPage++;
-    } while (jurCurrentPage <= jurMaxPage);
+    const jurisdictions = await fetchAllJurisdictions();
 
     if (jurisdictions.length > 0) {
       await saveJurisdictions(jurisdictions);
@@ -212,7 +160,7 @@ const runSyncWorker = async () => {
     }
 
     // prioriza estados que nunca foram sincronizados ou sincronizados há mais tempo
-    const orderedJurisdictions = await Jurisdiction.findAll({
+    const ordered = await Jurisdiction.findAll({
       order: [
         [sequelize.literal('last_synced_at IS NOT NULL'), 'ASC'],
         ['last_synced_at', 'ASC'],
@@ -220,13 +168,11 @@ const runSyncWorker = async () => {
       ],
     });
 
-    console.log(`[Worker] Iniciando varredura horizontal...`);
+    console.log('[Worker] Iniciando varredura horizontal...');
 
-    // Em vez de buscar todas as páginas de um estado antes de ir ao
-    // próximo, busco a página X de TODOS os estados,
-    // depois a página X+1 de todos, e assim por diante.
-    // Pra ter uma variedade maior de dados
-    const tasks: JurisdictionTask[] = orderedJurisdictions.map((j) => ({
+    // Varredura horizontal: página X de TODOS os estados,
+    // depois página X+1 de todos, pra ter variedade maior de dados
+    const tasks: JurisdictionTask[] = ordered.map((j) => ({
       id: j.id,
       name: j.name,
       maxPage: 1,
@@ -234,75 +180,27 @@ const runSyncWorker = async () => {
     }));
 
     syncProgress.total = tasks.length;
-
-    let currentPageLevel = 1;
+    let pageLevel = 1;
 
     while (tasks.some((t) => !t.done)) {
-      if (shouldCancel) throw new Error('Sincronização cancelada pelo usuário.');
+      checkCancel();
+      const pending = tasks.filter((t) => !t.done);
+      console.log(`[Worker] ── Varredura página ${pageLevel} | ${pending.length} jurisdições pendentes ──`);
 
-      const pendingTasks = tasks.filter((t) => !t.done);
-      console.log(`[Worker] ── Varredura página ${currentPageLevel} | ${pendingTasks.length} jurisdições pendentes ──`);
-
-      for (const task of pendingTasks) {
-        if (shouldCancel) throw new Error('Sincronização cancelada pelo usuário.');
-
-        if (currentPageLevel > task.maxPage) {
-          task.done = true;
-          syncProgress.synced = tasks.filter((t) => t.done).length;
-          continue;
-        }
-
-        try {
-          syncProgress.current = task.name;
-          console.log(`[Worker] Buscando ${task.name} - Página ${currentPageLevel}/${task.maxPage}...`);
-
-          const peopleRes = await fetchWithRetries('/people', {
-            jurisdiction: task.name,
-            per_page: 50,
-            page: currentPageLevel,
-          });
-
-          task.maxPage = peopleRes.data.pagination?.max_page || 1;
-          const results = peopleRes.data.results || [];
-
-          if (results.length > 0) {
-            await savePeopleBatch(results);
-            console.log(`[Worker] -> ${results.length} salvos em ${task.name} (Página ${currentPageLevel}/${task.maxPage})`);
-          }
-
-          if (currentPageLevel >= task.maxPage) {
-            task.done = true;
-            syncProgress.synced = tasks.filter((t) => t.done).length;
-            await Jurisdiction.update(
-              { last_synced_at: new Date() },
-              { where: { id: task.id } }
-            );
-          }
-
-        } catch (pageError: unknown) {
-          // se atingiu o limite diário não adianta continuar
-          if (pageError instanceof DailyLimitError) {
-            console.warn(`[Worker] ${pageError.message}. Abortando sincronização.`);
-            throw pageError;
-          }
-
-          if (pageError instanceof Error && pageError.message?.includes('cancelada')) throw pageError;
-
-          console.error(`[Worker] Erro ao buscar ${task.name} - Página ${currentPageLevel}. Continuando...`);
-          task.done = true;
-          syncProgress.synced = tasks.filter((t) => t.done).length;
-        }
+      for (const task of pending) {
+        checkCancel();
+        await processTask(task, tasks, pageLevel);
       }
 
-      currentPageLevel++;
+      pageLevel++;
     }
 
     console.log('[Worker] Sincronização concluída com sucesso!');
-  } catch (globalError: unknown) {
-    if (globalError instanceof Error && globalError.message?.includes('cancelada')) {
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message?.includes('cancelada')) {
       console.log('[Worker] Sincronização cancelada pelo usuário.');
     } else {
-      console.error('[Worker] Falha na sincronização:', globalError);
+      console.error('[Worker] Falha na sincronização:', error);
     }
   } finally {
     isSyncing = false;
@@ -310,6 +208,7 @@ const runSyncWorker = async () => {
     syncProgress.current = null;
   }
 };
+
 
 export const triggerBackgroundSync = () => {
   if (isSyncing) {
@@ -327,4 +226,3 @@ export const triggerBackgroundSync = () => {
 
   return { status: 'accepted', message: 'Job de Sincronização disparado em background!' };
 };
-
