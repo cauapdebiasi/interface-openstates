@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { Person } from '../models/Person.js';
 import { Jurisdiction } from '../models/Jurisdiction.js';
-import { triggerBackgroundSync } from '../services/openstatesService.js';
+import { triggerBackgroundSync, getSyncProgress, cancelSync } from '../services/openstatesService.js';
 import { Op } from 'sequelize';
 import { z } from 'zod';
 import { StatusCodes } from 'http-status-codes';
@@ -117,6 +117,19 @@ export const syncPeople = (req: Request, res: Response) => {
     }
   } catch (error: any) {
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: error.message });
+  }
+};
+
+export const getSyncProgressData = (req: Request, res: Response) => {
+  res.json(getSyncProgress());
+};
+
+export const cancelSyncHandler = (req: Request, res: Response) => {
+  const cancelled = cancelSync();
+  if (cancelled) {
+    res.json({ message: 'Cancelamento solicitado.' });
+  } else {
+    res.status(StatusCodes.CONFLICT).json({ message: 'Nenhuma sincronização em andamento.' });
   }
 };
 

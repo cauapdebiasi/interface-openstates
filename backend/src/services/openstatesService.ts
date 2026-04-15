@@ -50,9 +50,29 @@ const waitForRateLimit = async (): Promise<void> => {
 };
 
 export let isSyncing = false;
+let shouldCancel = false;
+
+interface SyncProgress {
+  synced: number;
+  total: number;
+  current: string | null;
+}
+
+const syncProgress: SyncProgress = { synced: 0, total: 0, current: null };
+
+export const getSyncProgress = () => ({
+  isSyncing,
+  ...syncProgress,
+});
+
+export const cancelSync = () => {
+  if (!isSyncing) return false;
+  shouldCancel = true;
+  return true;
+};
 
 // para limpar o estado nos testes
-export const resetSyncingStateForTests = () => { isSyncing = false; };
+export const resetSyncingStateForTests = () => { isSyncing = false; shouldCancel = false; };
 
 class DailyLimitError extends Error {
   constructor(message: string) {
@@ -137,11 +157,18 @@ const runSyncWorker = async () => {
   try {
     console.log('[Worker] Iniciando sincronização...');
 
+    // reseta progresso
+    syncProgress.synced = 0;
+    syncProgress.total = 0;
+    syncProgress.current = null;
+
     let jurisdictions: any[] = [];
     let jurCurrentPage = 1;
     let jurMaxPage = 1;
 
     do {
+      if (shouldCancel) throw new Error('Sincronização cancelada pelo usuário.');
+
       console.log(`[Worker] Mapeando Jurisdições - Página ${jurCurrentPage}...`);
       const jurRes = await fetchWithRetries('/jurisdictions', {
         classification: 'state',
@@ -182,19 +209,27 @@ const runSyncWorker = async () => {
       done: false,
     }));
 
+    syncProgress.total = tasks.length;
+
     let currentPageLevel = 1;
 
     while (tasks.some((t) => !t.done)) {
+      if (shouldCancel) throw new Error('Sincronização cancelada pelo usuário.');
+
       const pendingTasks = tasks.filter((t) => !t.done);
       console.log(`[Worker] ── Varredura página ${currentPageLevel} | ${pendingTasks.length} jurisdições pendentes ──`);
 
       for (const task of pendingTasks) {
+        if (shouldCancel) throw new Error('Sincronização cancelada pelo usuário.');
+
         if (currentPageLevel > task.maxPage) {
           task.done = true;
+          syncProgress.synced = tasks.filter((t) => t.done).length;
           continue;
         }
 
         try {
+          syncProgress.current = task.name;
           console.log(`[Worker] Buscando ${task.name} - Página ${currentPageLevel}/${task.maxPage}...`);
 
           const peopleRes = await fetchWithRetries('/people', {
@@ -213,6 +248,7 @@ const runSyncWorker = async () => {
 
           if (currentPageLevel >= task.maxPage) {
             task.done = true;
+            syncProgress.synced = tasks.filter((t) => t.done).length;
             await Jurisdiction.update(
               { last_synced_at: new Date() },
               { where: { id: task.id } }
@@ -226,8 +262,11 @@ const runSyncWorker = async () => {
             throw pageError;
           }
 
+          if (pageError.message?.includes('cancelada')) throw pageError;
+
           console.error(`[Worker] Erro ao buscar ${task.name} - Página ${currentPageLevel}. Continuando...`);
           task.done = true;
+          syncProgress.synced = tasks.filter((t) => t.done).length;
         }
       }
 
@@ -235,10 +274,16 @@ const runSyncWorker = async () => {
     }
 
     console.log('[Worker] Sincronização concluída com sucesso!');
-  } catch (globalError) {
-    console.error('[Worker] Falha na sincronização:', globalError);
+  } catch (globalError: any) {
+    if (globalError.message?.includes('cancelada')) {
+      console.log('[Worker] Sincronização cancelada pelo usuário.');
+    } else {
+      console.error('[Worker] Falha na sincronização:', globalError);
+    }
   } finally {
     isSyncing = false;
+    shouldCancel = false;
+    syncProgress.current = null;
   }
 };
 
@@ -248,10 +293,12 @@ export const triggerBackgroundSync = () => {
   }
 
   isSyncing = true;
+  shouldCancel = false;
 
   runSyncWorker().catch((e) => {
     console.error('[Worker] Erro ao executar sincronização:', e);
     isSyncing = false;
+    shouldCancel = false;
   });
 
   return { status: 'accepted', message: 'Job de Sincronização disparado em background!' };

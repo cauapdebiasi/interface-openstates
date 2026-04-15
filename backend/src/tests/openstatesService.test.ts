@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { triggerBackgroundSync, resetSyncingStateForTests } from '../services/openstatesService.js';
+import { triggerBackgroundSync, resetSyncingStateForTests, cancelSync, getSyncProgress } from '../services/openstatesService.js';
 
 // cria um mock do axios pra não bater na api nos testes
 vi.mock('axios', () => {
@@ -66,5 +66,29 @@ describe('OpenStates Service - Sincronização em background', () => {
 
     const response2 = triggerBackgroundSync();
     expect(response2.status).toBe('accepted');
+  });
+
+  it('deve cancelar a sincronização e liberar para uma nova', async () => {
+    const response = triggerBackgroundSync();
+    expect(response.status).toBe('accepted');
+    expect(getSyncProgress().isSyncing).toBe(true);
+
+    // cancela enquanto está rodando
+    const cancelled = cancelSync();
+    expect(cancelled).toBe(true);
+
+    // espera o worker processar o cancelamento
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    // deve ter liberado o lock
+    expect(getSyncProgress().isSyncing).toBe(false);
+
+    // deve aceitar nova sync
+    const response2 = triggerBackgroundSync();
+    expect(response2.status).toBe('accepted');
+  });
+
+  it('cancelSync deve retornar false quando não há sincronização ativa', () => {
+    expect(cancelSync()).toBe(false);
   });
 });

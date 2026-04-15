@@ -51,6 +51,23 @@ export const syncPeople = async (): Promise<any> => {
   return response.data;
 };
 
+export interface SyncProgressData {
+  isSyncing: boolean;
+  synced: number;
+  total: number;
+  current: string | null;
+}
+
+export const getSyncProgressData = async (): Promise<SyncProgressData> => {
+  const response = await api.get('/people/sync/progress');
+  return response.data;
+};
+
+export const cancelSyncRequest = async (): Promise<any> => {
+  const response = await api.post('/people/sync/cancel');
+  return response.data;
+};
+
 export const getSyncSchedule = async (): Promise<string> => {
   const response = await api.get('/people/sync/schedule');
   return response.data.frequency;

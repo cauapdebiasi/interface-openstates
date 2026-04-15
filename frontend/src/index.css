@@ -133,6 +133,33 @@ body::before {
   transform: translateY(0);
 }
 
+.sync-button--active {
+  background: rgba(239, 68, 68, 0.1) !important;
+  color: var(--green-700) !important;
+  border: 1px solid var(--green-200) !important;
+  box-shadow: none;
+}
+
+.sync-button--active:hover {
+  background: rgba(239, 68, 68, 0.15) !important;
+  color: #dc2626 !important;
+  border-color: #fca5a5 !important;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.2) !important;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.sync-button--active .tabler-icon-x {
+  animation: none;
+}
+
+.sync-button--active .tabler-icon-refresh {
+  animation: spin 1.5s linear infinite;
+}
+
 .filter-paper {
   background: var(--bg-filter) !important;
   border: 1px solid var(--border) !important;

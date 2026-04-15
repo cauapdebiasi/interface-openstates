@@ -1,19 +1,42 @@
-import { Group, Title, Container, Paper, Button, Select } from '@mantine/core';
-import { IconBuildingMonument, IconRefresh, IconClock } from '@tabler/icons-react';
+import { Group, Title, Container, Paper, Button, Select, Tooltip } from '@mantine/core';
+import { IconBuildingMonument, IconRefresh, IconClock, IconX } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { notifications } from '@mantine/notifications';
-import { getSyncSchedule, updateSyncSchedule } from '../services/api';
+import { getSyncSchedule, updateSyncSchedule, getSyncProgressData, cancelSyncRequest } from '../services/api';
 import { useSyncMutation } from '../hooks/useSyncMutation';
 
 export function Header() {
   const queryClient = useQueryClient();
+  const refetchIntervalMs = 2000
 
   const { data: currentSchedule, isLoading: isScheduleLoading } = useQuery({
     queryKey: ['syncSchedule'],
     queryFn: getSyncSchedule,
   });
 
+  const { data: progress } = useQuery({
+    queryKey: ['syncProgress'],
+    queryFn: getSyncProgressData,
+    refetchInterval: (query) => {
+      // refetch enquanto estiver sincronizando, senão para
+      return query.state.data?.isSyncing ? refetchIntervalMs : false;
+    },
+  });
+
+  const isSyncing = progress?.isSyncing ?? false;
+
   const syncMutation = useSyncMutation();
+
+  const cancelMutation = useMutation({
+    mutationFn: cancelSyncRequest,
+    onSuccess: () => {
+      notifications.show({
+        title: 'Cancelado',
+        message: 'A sincronização será interrompida em breve.',
+        color: 'blue',
+      });
+    },
+  });
 
   const scheduleMutation = useMutation({
     mutationFn: updateSyncSchedule,
@@ -33,6 +56,25 @@ export function Header() {
       });
     }
   });
+
+  const handleSyncClick = () => {
+    if (isSyncing) {
+      cancelMutation.mutate();
+    } else {
+      syncMutation.mutate(undefined, {
+        onSuccess: () => {
+          // começa a pollar o progresso
+          queryClient.invalidateQueries({ queryKey: ['syncProgress'] });
+        },
+      });
+    }
+  };
+
+  const progressLabel = isSyncing && progress
+    ? progress.total > 0
+      ? `${progress.synced}/${progress.total} jurisdições${progress.current ? ` — ${progress.current}` : ''}`
+      : 'Mapeando jurisdições...'
+    : undefined;
 
   return (
     <Paper className="app-header" radius={0} py="md" pos="sticky" top={0} style={{ zIndex: 100 }}>
@@ -66,14 +108,23 @@ export function Header() {
               allowDeselect={false}
             />
 
-            <Button
-              className="sync-button"
-              leftSection={<IconRefresh size={16} />}
-              onClick={() => syncMutation.mutate()}
-              loading={syncMutation.isPending}
+            <Tooltip
+              label={progressLabel}
+              disabled={!progressLabel}
+              position="bottom"
+              withArrow
             >
-              Atualizar Dados
-            </Button>
+              <Button
+                className={`sync-button ${isSyncing ? 'sync-button--active' : ''}`}
+                leftSection={isSyncing ? <IconX size={16} /> : <IconRefresh size={16} />}
+                onClick={handleSyncClick}
+                loading={syncMutation.isPending || cancelMutation.isPending}
+                color={isSyncing ? 'red' : undefined}
+                variant={isSyncing ? 'light' : 'filled'}
+              >
+                {isSyncing ? 'Parar processo' : 'Atualizar Dados'}
+              </Button>
+            </Tooltip>
           </Group>
         </Group>
       </Container>
