@@ -6,6 +6,7 @@ import { Op, WhereOptions } from 'sequelize';
 import { z } from 'zod';
 import { StatusCodes } from 'http-status-codes';
 import { encodeCursor, decodeCursor } from '../utils/cursorUtils.js';
+import { toPersonDTO, toStateDTO } from '../dtos/personDto.js';
 
 const getPeopleQuerySchema = z.object({
   jurisdiction_id: z.string({ message: 'O filtro de jurisdição deve ser um texto válido' }).optional(),
@@ -24,9 +25,7 @@ export const getStatesData = async (req: Request, res: Response) => {
       order: [['name', 'ASC']],
     });
     res.json({
-      results: jurisdictions
-        .filter((j) => j.name)
-        .map((j) => ({ value: j.id, label: j.name })),
+      results: jurisdictions.map(toStateDTO).filter(Boolean),
     });
   } catch (error) {
     console.error('Erro ao mapear estados:', error);
@@ -95,7 +94,7 @@ export const getPeople = async (req: Request, res: Response) => {
     }
 
     res.json({
-      results: people,
+      results: people.map(toPersonDTO),
       pagination: {
         next_cursor: nextCursor || null
       }
