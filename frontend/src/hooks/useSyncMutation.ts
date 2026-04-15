@@ -1,5 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
 import { notifications } from '@mantine/notifications';
+import axios from 'axios';
 import { syncPeople } from '../services/api';
 
 export function useSyncMutation() {
@@ -12,12 +13,19 @@ export function useSyncMutation() {
         color: 'green',
       });
     },
-    onError: (error: any) => {
-      const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Erro ao iniciar a sincronização';
+    onError: (error: unknown) => {
+      let errorMessage = 'Erro ao iniciar a sincronização';
+      let color = 'red';
+
+      if (axios.isAxiosError(error)) {
+        errorMessage = error.response?.data?.error || error.response?.data?.message || errorMessage;
+        color = error.response?.status === 409 ? 'orange' : 'red';
+      }
+
       notifications.show({
         title: 'Atenção',
         message: errorMessage,
-        color: error.response?.status === 409 ? 'orange' : 'red',
+        color,
       });
     }
   });

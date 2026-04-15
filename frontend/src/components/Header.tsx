@@ -2,6 +2,7 @@ import { Group, Title, Container, Paper, Button, Select, Tooltip } from '@mantin
 import { IconBuildingMonument, IconRefresh, IconClock, IconX } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { notifications } from '@mantine/notifications';
+import axios from 'axios';
 import { getSyncSchedule, updateSyncSchedule, getSyncProgressData, cancelSyncRequest } from '../services/api';
 import { useSyncMutation } from '../hooks/useSyncMutation';
 
@@ -65,10 +66,10 @@ export function Header() {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: ['syncProgress'] });
         },
-        onError: (error: any) => {
+        onError: (error: unknown) => {
           // se já tem sync rodando então vai invalidar
           // pra cair no loop de refetch e permitir acompanhar e cancelar
-          if (error.response?.status === 409) {
+          if (axios.isAxiosError(error) && error.response?.status === 409) {
             queryClient.invalidateQueries({ queryKey: ['syncProgress'] });
           }
         },

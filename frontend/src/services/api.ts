@@ -46,7 +46,12 @@ export const getParties = async (): Promise<string[]> => {
   return response.data.results || [];
 };
 
-export const syncPeople = async (): Promise<any> => {
+export interface SyncResponse {
+  status: 'accepted' | 'rejected';
+  message: string;
+}
+
+export const syncPeople = async (): Promise<SyncResponse> => {
   const response = await api.post('/people/sync');
   return response.data;
 };
@@ -63,7 +68,11 @@ export const getSyncProgressData = async (): Promise<SyncProgressData> => {
   return response.data;
 };
 
-export const cancelSyncRequest = async (): Promise<any> => {
+export interface CancelSyncResponse {
+  message: string;
+}
+
+export const cancelSyncRequest = async (): Promise<CancelSyncResponse> => {
   const response = await api.post('/people/sync/cancel');
   return response.data;
 };
@@ -73,7 +82,12 @@ export const getSyncSchedule = async (): Promise<string> => {
   return response.data.frequency;
 };
 
-export const updateSyncSchedule = async (frequency: string): Promise<any> => {
+export interface UpdateScheduleResponse {
+  message: string;
+  frequency: string;
+}
+
+export const updateSyncSchedule = async (frequency: string): Promise<UpdateScheduleResponse> => {
   const response = await api.put('/people/sync/schedule', { frequency });
   return response.data;
 };
