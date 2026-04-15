@@ -198,18 +198,58 @@ Todos os endpoints estão sob o prefixo `/api/v1`.
 | ------ | ------ | --------------------------------------- |
 | `GET`  | `/`    | Lista jurisdições (estados) disponíveis |
 
+**Exemplo de resposta `GET /states`:**
+
+```json
+{
+  "results": [
+    { "value": "ocd-jurisdiction/country:us/state:ca/government", "label": "California" },
+    { "value": "ocd-jurisdiction/country:us/state:tx/government", "label": "Texas" }
+  ]
+}
+```
+
 ### Partidos (`/parties`)
 
 | Método | Rota   | Descrição                  |
 | ------ | ------ | -------------------------- |
 | `GET`  | `/`    | Lista partidos disponíveis |
 
+**Exemplo de resposta `GET /parties`:**
+
+```json
+{
+  "results": ["Democratic", "Republican", "Independent"]
+}
+```
+
 ### Sincronização (`/people`)
 
 | Método | Rota              | Descrição                                    |
 | ------ | ----------------- | -------------------------------------------- |
 | `POST` | `/sync`           | Dispara sincronização em background          |
+| `GET`  | `/sync/progress`  | Retorna progresso da sincronização atual     |
+| `POST` | `/sync/cancel`    | Solicita cancelamento da sincronização       |
 | `GET`  | `/sync/schedule`  | Retorna frequência de agendamento atual      |
 | `PUT`  | `/sync/schedule`  | Atualiza frequência de agendamento           |
+
+**Exemplo de resposta `GET /people/sync/progress`:**
+
+```json
+{
+  "isSyncing": true,
+  "synced": 12,
+  "total": 52,
+  "current": "California"
+}
+```
+
+**Exemplo de resposta `GET /people/sync/schedule`:**
+
+```json
+{
+  "frequency": "daily"
+}
+```
 
 **Frequências de agendamento válidas:** `none`, `hourly`, `daily`, `every2days`, `every3days`, `weekly`
