@@ -1,4 +1,5 @@
-import { Group, Title, Container, Paper, Button, Select, Tooltip } from '@mantine/core';
+import { useState } from 'react';
+import { Group, Title, Container, Paper, Button, Select, Tooltip, Burger, Collapse, Stack } from '@mantine/core';
 import { IconBuildingMonument, IconRefresh, IconClock, IconX } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { notifications } from '@mantine/notifications';
@@ -8,7 +9,8 @@ import { useSyncMutation } from '../hooks/useSyncMutation';
 
 export function Header() {
   const queryClient = useQueryClient();
-  const refetchIntervalMs = 2000
+  const refetchIntervalMs = 2000;
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const { data: currentSchedule, isLoading: isScheduleLoading } = useQuery({
     queryKey: ['syncSchedule'],
@@ -19,7 +21,6 @@ export function Header() {
     queryKey: ['syncProgress'],
     queryFn: getSyncProgressData,
     refetchInterval: (query) => {
-      // refetch enquanto estiver sincronizando, senão para
       return query.state.data?.isSyncing ? refetchIntervalMs : false;
     },
   });
@@ -67,8 +68,6 @@ export function Header() {
           queryClient.invalidateQueries({ queryKey: ['syncProgress'] });
         },
         onError: (error: unknown) => {
-          // se já tem sync rodando então vai invalidar
-          // pra cair no loop de refetch e permitir acompanhar e cancelar
           if (axios.isAxiosError(error) && error.response?.status === 409) {
             queryClient.invalidateQueries({ queryKey: ['syncProgress'] });
           }
@@ -83,6 +82,49 @@ export function Header() {
       : 'Mapeando jurisdições...'
     : undefined;
 
+  const actionsContent = (
+    <>
+      <Select
+        label="Sincronização automática"
+        leftSection={<IconClock size={16} />}
+        placeholder="Agendamento"
+        data={[
+          { value: 'none', label: 'Nunca (Manual)' },
+          { value: 'everyMinute', label: 'A cada minuto' },
+          { value: 'hourly', label: 'A cada hora' },
+          { value: 'daily', label: 'Diariamente' },
+          { value: 'every2days', label: 'A cada 2 dias' },
+          { value: 'every3days', label: 'A cada 3 dias' },
+          { value: 'weekly', label: 'Semanalmente' }
+        ]}
+        value={currentSchedule || 'none'}
+        onChange={(val) => {
+          if (val) scheduleMutation.mutate(val);
+        }}
+        disabled={isScheduleLoading || scheduleMutation.isPending}
+        allowDeselect={false}
+      />
+
+      <Tooltip
+        label={progressLabel}
+        disabled={!progressLabel}
+        position="bottom"
+        withArrow
+      >
+        <Button
+          className={`sync-button ${isSyncing ? 'sync-button--active' : ''}`}
+          leftSection={isSyncing ? <IconX size={16} /> : <IconRefresh size={16} />}
+          onClick={handleSyncClick}
+          loading={syncMutation.isPending || cancelMutation.isPending}
+          color={isSyncing ? 'red' : undefined}
+          variant={isSyncing ? 'light' : 'filled'}
+        >
+          {isSyncing ? 'Parar processo' : 'Atualizar Dados'}
+        </Button>
+      </Tooltip>
+    </>
+  );
+
   return (
     <Paper className="app-header" radius={0} py="md" pos="sticky" top={0} style={{ zIndex: 100 }}>
       <Container size="xl">
@@ -94,47 +136,24 @@ export function Header() {
             </Title>
           </Group>
 
-          <Group className="header-actions" gap="md" align="flex-end">
-            <Select
-              label="Sincronização automática"
-              leftSection={<IconClock size={16} />}
-              placeholder="Agendamento"
-              data={[
-                { value: 'none', label: 'Nunca (Manual)' },
-                { value: 'everyMinute', label: 'A cada minuto' },
-                { value: 'hourly', label: 'A cada hora' },
-                { value: 'daily', label: 'Diariamente' },
-                { value: 'every2days', label: 'A cada 2 dias' },
-                { value: 'every3days', label: 'A cada 3 dias' },
-                { value: 'weekly', label: 'Semanalmente' }
-              ]}
-              value={currentSchedule || 'none'}
-              onChange={(val) => {
-                if (val) scheduleMutation.mutate(val);
-              }}
-              disabled={isScheduleLoading || scheduleMutation.isPending}
-              allowDeselect={false}
-            />
-
-            <Tooltip
-              label={progressLabel}
-              disabled={!progressLabel}
-              position="bottom"
-              withArrow
-            >
-              <Button
-                className={`sync-button ${isSyncing ? 'sync-button--active' : ''}`}
-                leftSection={isSyncing ? <IconX size={16} /> : <IconRefresh size={16} />}
-                onClick={handleSyncClick}
-                loading={syncMutation.isPending || cancelMutation.isPending}
-                color={isSyncing ? 'red' : undefined}
-                variant={isSyncing ? 'light' : 'filled'}
-              >
-                {isSyncing ? 'Parar processo' : 'Atualizar Dados'}
-              </Button>
-            </Tooltip>
+          <Group className="header-actions header-actions--desktop" gap="md" align="flex-end">
+            {actionsContent}
           </Group>
+
+          <Burger
+            className="header-burger"
+            opened={menuOpen}
+            onClick={() => setMenuOpen((o) => !o)}
+            size="sm"
+            aria-label="Menu de ações"
+          />
         </Group>
+
+        <Collapse expanded={menuOpen} transitionDuration={250} transitionTimingFunction="ease">
+          <Stack className="header-actions--mobile" gap="sm" mt="md">
+            {actionsContent}
+          </Stack>
+        </Collapse>
       </Container>
     </Paper>
   );

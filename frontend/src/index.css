@@ -148,8 +148,13 @@ body::before {
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .sync-button--active .tabler-icon-x {
@@ -367,13 +372,42 @@ body::before {
   background: var(--green-400);
 }
 
+.header-burger {
+  display: none;
+}
+
 @media (max-width: 768px) {
   .app-header-title {
     font-size: 1rem !important;
   }
 
-  .header-actions {
-    flex-wrap: wrap;
-    gap: 8px !important;
+  .header-actions--desktop {
+    display: none !important;
+  }
+
+  .header-burger {
+    display: block;
+  }
+
+  .header-actions--mobile {
+    padding-top: 4px;
+    border-top: 1px solid var(--border);
+    animation: slideDown 0.25s var(--ease) both;
+  }
+
+  .header-actions--mobile .sync-button {
+    width: 100%;
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
