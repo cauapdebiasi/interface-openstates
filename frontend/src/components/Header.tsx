@@ -94,6 +94,7 @@ export function Header() {
               placeholder="Agendamento"
               data={[
                 { value: 'none', label: 'Nunca (Manual)' },
+                { value: 'everyMinute', label: 'A cada minuto' },
                 { value: 'hourly', label: 'A cada hora' },
                 { value: 'daily', label: 'Diariamente' },
                 { value: 'every2days', label: 'A cada 2 dias' },

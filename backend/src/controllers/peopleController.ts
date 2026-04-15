@@ -145,7 +145,7 @@ export const getSyncSchedule = async (req: Request, res: Response) => {
 };
 
 const frequencySchema = z.object({
-  frequency: z.enum(['none', 'hourly', 'daily', 'every2days', 'every3days', 'weekly'], {
+  frequency: z.enum(['none', 'everyMinute', 'hourly', 'daily', 'every2days', 'every3days', 'weekly'], {
     message: 'Frequência inválida',
   }),
 });

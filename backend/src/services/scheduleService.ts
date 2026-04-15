@@ -5,6 +5,7 @@ import { Setting } from '../models/Setting.js';
 let currentTask: cron.ScheduledTask | null = null;
 
 const frequencyToCron: Record<string, string> = {
+  everyMinute: '* * * * *',
   hourly: '0 * * * *',
   daily: '0 0 * * *',
   every2days: '0 0 */2 * *',
@@ -24,7 +25,7 @@ export const initSchedule = async () => {
 };
 
 export const updateSchedule = async (frequency: string) => {
-  const allowed = ['none', 'hourly', 'daily', 'every2days', 'every3days', 'weekly'];
+  const allowed = ['none', 'everyMinute', 'hourly', 'daily', 'every2days', 'every3days', 'weekly'];
   if (!allowed.includes(frequency)) {
     throw new Error('Frequência de sincronização inválida.');
   }

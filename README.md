@@ -252,4 +252,4 @@ Todos os endpoints estão sob o prefixo `/api/v1`.
 }
 ```
 
-**Frequências de agendamento válidas:** `none`, `hourly`, `daily`, `every2days`, `every3days`, `weekly`
+**Frequências de agendamento válidas:** `none`, `everyMinute`, `hourly`, `daily`, `every2days`, `every3days`, `weekly`
