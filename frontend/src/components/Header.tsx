@@ -63,8 +63,14 @@ export function Header() {
     } else {
       syncMutation.mutate(undefined, {
         onSuccess: () => {
-          // começa a pollar o progresso
           queryClient.invalidateQueries({ queryKey: ['syncProgress'] });
+        },
+        onError: (error: any) => {
+          // se já tem sync rodando então vai invalidar
+          // pra cair no loop de refetch e permitir acompanhar e cancelar
+          if (error.response?.status === 409) {
+            queryClient.invalidateQueries({ queryKey: ['syncProgress'] });
+          }
         },
       });
     }
