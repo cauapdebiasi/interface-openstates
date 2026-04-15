@@ -33,7 +33,7 @@ vi.mock('../models/Person.js', () => ({
 
 vi.mock('../config/database.js', () => ({
   default: {
-    transaction: vi.fn((cb: any) => cb({})),
+    transaction: vi.fn((cb: (t: object) => void) => cb({})),
     literal: vi.fn((val: string) => val),
   },
 }));

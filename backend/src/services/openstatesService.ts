@@ -1,8 +1,30 @@
-import axios from 'axios';
+import axios, { AxiosResponse } from 'axios';
 import { env } from '../config/env.js';
 import { Person } from '../models/Person.js';
 import { Jurisdiction } from '../models/Jurisdiction.js';
 import sequelize from '../config/database.js';
+
+interface OpenStatesResult {
+  id: string;
+  name: string;
+  party?: string;
+  current_role?: { title?: string };
+  jurisdiction?: { id?: string; name?: string };
+  gender?: string;
+  birth_date?: string;
+  death_date?: string;
+  image?: string;
+  classification?: string;
+}
+
+interface OpenStatesPagination {
+  max_page?: number;
+}
+
+interface OpenStatesResponse {
+  results: OpenStatesResult[];
+  pagination?: OpenStatesPagination;
+}
 
 const openstatesApi = axios.create({
   baseURL: 'https://v3.openstates.org',
@@ -81,14 +103,14 @@ class DailyLimitError extends Error {
   }
 }
 
-const fetchWithRetries = async (url: string, params: any, retries = 4): Promise<any> => {
+const fetchWithRetries = async (url: string, params: Record<string, unknown>, retries = 4): Promise<AxiosResponse<OpenStatesResponse>> => {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       await waitForRateLimit();
       return await openstatesApi.get(url, { params });
-    } catch (error: any) {
-      const status = error?.response?.status;
-      const detail = error?.response?.data?.detail || '';
+    } catch (error: unknown) {
+      const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+      const detail = axios.isAxiosError(error) ? (error.response?.data as Record<string, string>)?.detail || '' : '';
 
       // Se a api retornar limite diário excedido, aborta tudo
       if (status === 429 && /day/i.test(detail)) {
@@ -108,10 +130,12 @@ const fetchWithRetries = async (url: string, params: any, retries = 4): Promise<
       }
     }
   }
+
+  throw new Error(`Todas as ${retries} tentativas falharam para ${url}`);
 };
 
-const savePeopleBatch = async (results: any[]) => {
-  const peopleData = results.map((item: any) => ({
+const savePeopleBatch = async (results: OpenStatesResult[]) => {
+  const peopleData = results.map((item) => ({
     id: item.id,
     name: item.name,
     role_title: item.current_role?.title || null,
@@ -131,8 +155,8 @@ const savePeopleBatch = async (results: any[]) => {
   });
 };
 
-const saveJurisdictions = async (jurisdictions: any[]) => {
-  const data = jurisdictions.map((j: any) => ({
+const saveJurisdictions = async (jurisdictions: OpenStatesResult[]) => {
+  const data = jurisdictions.map((j) => ({
     id: j.id,
     name: j.name,
     classification: j.classification || null,
@@ -162,7 +186,7 @@ const runSyncWorker = async () => {
     syncProgress.total = 0;
     syncProgress.current = null;
 
-    let jurisdictions: any[] = [];
+    let jurisdictions: OpenStatesResult[] = [];
     let jurCurrentPage = 1;
     let jurMaxPage = 1;
 
@@ -255,14 +279,14 @@ const runSyncWorker = async () => {
             );
           }
 
-        } catch (pageError: any) {
+        } catch (pageError: unknown) {
           // se atingiu o limite diário não adianta continuar
           if (pageError instanceof DailyLimitError) {
             console.warn(`[Worker] ${pageError.message}. Abortando sincronização.`);
             throw pageError;
           }
 
-          if (pageError.message?.includes('cancelada')) throw pageError;
+          if (pageError instanceof Error && pageError.message?.includes('cancelada')) throw pageError;
 
           console.error(`[Worker] Erro ao buscar ${task.name} - Página ${currentPageLevel}. Continuando...`);
           task.done = true;
@@ -274,8 +298,8 @@ const runSyncWorker = async () => {
     }
 
     console.log('[Worker] Sincronização concluída com sucesso!');
-  } catch (globalError: any) {
-    if (globalError.message?.includes('cancelada')) {
+  } catch (globalError: unknown) {
+    if (globalError instanceof Error && globalError.message?.includes('cancelada')) {
       console.log('[Worker] Sincronização cancelada pelo usuário.');
     } else {
       console.error('[Worker] Falha na sincronização:', globalError);

@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { Person } from '../models/Person.js';
 import { Jurisdiction } from '../models/Jurisdiction.js';
 import { triggerBackgroundSync, getSyncProgress, cancelSync } from '../services/openstatesService.js';
-import { Op } from 'sequelize';
+import { Op, WhereOptions } from 'sequelize';
 import { z } from 'zod';
 import { StatusCodes } from 'http-status-codes';
 import { encodeCursor, decodeCursor } from '../utils/cursorUtils.js';
@@ -57,7 +57,7 @@ export const getPeople = async (req: Request, res: Response) => {
 
     const { jurisdiction_id, party, cursor, limit } = query.data;
 
-    const whereClause: any = {};
+    const whereClause: Record<string | symbol, unknown> = {};
     if (jurisdiction_id) whereClause.jurisdiction_id = jurisdiction_id;
     if (party) whereClause.party = party;
 
@@ -115,8 +115,9 @@ export const syncPeople = (req: Request, res: Response) => {
     } else {
       res.status(StatusCodes.ACCEPTED).json(result);
     }
-  } catch (error: any) {
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: error.message });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Erro desconhecido';
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: message });
   }
 };
 
@@ -139,8 +140,9 @@ export const getSyncSchedule = async (req: Request, res: Response) => {
   try {
     const frequency = await getCronSchedule();
     res.json({ frequency });
-  } catch (error: any) {
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: error.message });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Erro desconhecido';
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: message });
   }
 };
 
@@ -162,7 +164,8 @@ export const updateSyncSchedule = async (req: Request, res: Response) => {
 
     await updateCronSchedule(parsed.data.frequency);
     res.json({ message: 'Agendamento atualizado com sucesso', frequency: parsed.data.frequency });
-  } catch (error: any) {
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: error.message });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Erro desconhecido';
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: message });
   }
 };
